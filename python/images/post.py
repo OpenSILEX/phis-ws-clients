@@ -66,7 +66,7 @@ colsensoruri = 6
 
 reader = csv.reader(csvfile)
 
-#print u"first line =", lecteur.next(), "\n"
+#print u"first line =", reader.next(), "\n"
 
 for line in reader:
     #metadata images
@@ -77,7 +77,7 @@ for line in reader:
     position = line[colposition]
     sensor = line[colsensoruri]
     date = line[coldate]
-    datetosend = datetime.strptime(date, "%d/%m/%Y %H:%M")
+    datetosend = datetime.strptime(date, "%Y-%m-%d %I:%M:%S")
     tz =  pytz.timezone('Europe/Paris')
     datetosend = datetosend.replace(tzinfo = tz)
     dateforwebservice = datetosend.strftime("%Y-%m-%d %I:%M:%S%z")
