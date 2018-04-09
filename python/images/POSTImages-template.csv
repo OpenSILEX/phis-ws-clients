@@ -1,0 +1,2 @@
+path_image_ref,imageType,concernedUri,concernedType,position,date,sensorUri
+path/to/image,http://www.phenome-fppn.fr/vocabulary/2017#HemisphericalImage,http://www.phenome-fppn.fr/diaphen/DIA2017-3,http://www.phenome-fppn.fr/vocabulary/2017#Experiment,1,15/06/2017 09:00,http://www.phenome-fppn.fr/diaphen/2018/s18035
