@@ -7,13 +7,14 @@
 ## Creation date: December 2017
 ## Contact: morgane.vidal@inra.fr, anne.tireau@inra.fr, pascal.neveu@inra.fr
 ## Last modification date:  December, 2017
-## Subject: Accessing PHIS's webservice with python API
+## Subject: Accessing PHIS's webservice with python API and insert images
+## from a given csv file
 ##**
 
 import requests, json, csv, os.path, hashlib, pytz
 from datetime import datetime
 
-host = 'http://127.0.0.1:8084/phisAPI/rest/'
+host = 'http://localhost:8084/phis2ws/rest/'
 
 ################################################################################
 ## Token generation
@@ -35,7 +36,7 @@ print(response.text + "\n")
 
 token = response.json()['access_token'];
 
-print (token + "\n")
+print ("token : " + token + "\n")
 
 
 ################################################################################
@@ -53,21 +54,30 @@ headersimageupload = { 'Content-Type': 'application/octet-stream',
 'Authorization':'Bearer ' + token
 }
 
-csvfile = open("file.csv","rb")
+csvfile = open("POSTImages-template.csv","rb")
 
-lecteur = csv.reader(csvfile)
+colimagepath = 0
+colimagetype = 1
+colconcerneduri = 2
+colconcernedtype = 3
+colposition = 4
+coldate = 5
+colsensoruri = 6
 
-print u"premiere ligne =", lecteur.next(), "\n"
+reader = csv.reader(csvfile)
 
-for ligne in lecteur:
+#print u"first line =", reader.next(), "\n"
+
+for line in reader:
     #metadata images
-    imagepath = ligne[0]
-    concerneduri = ligne[1]
-    position = ligne[3]
-    date = ligne[4]
-    imagetype = ligne[5]
-    concernedtype = ligne[6]    
-    datetosend = datetime.strptime(date, "%d/%m/%Y %H:%M")
+    imagepath = line[colimagepath]
+    imagetype = line[colimagetype]
+    concerneduri = line[colconcerneduri]
+    concernedtype = line[colconcernedtype]
+    position = line[colposition]
+    sensor = line[colsensoruri]
+    date = line[coldate]
+    datetosend = datetime.strptime(date, "%Y-%m-%d %I:%M:%S")
     tz =  pytz.timezone('Europe/Paris')
     datetosend = datetosend.replace(tzinfo = tz)
     dateforwebservice = datetosend.strftime("%Y-%m-%d %I:%M:%S%z")
@@ -78,33 +88,54 @@ for ligne in lecteur:
     checksum = hashlib.md5(open(imagepath, "r").read()).hexdigest()
     
     #send image metadata to webservice
-    data = [{
-    "rdfType": imagetype,
-    "concern": [
-      {
-        "uri": concerneduri,
-        "typeURI": concernedtype
-      }
-    ],
-    "configuration": {
-      "date": dateforwebservice,
-      "position": position
-    },
-    "fileInfo": {
-      "checksum": checksum,
-      "extension": extension
-    }
-    }]
-  
+    if position != "":
+        data = [{
+        "rdfType": imagetype,
+        "concern": [
+          {
+            "uri": concerneduri,
+            "typeURI": concernedtype
+          }
+        ],
+        "configuration": {
+          "date": dateforwebservice,
+          "position": position,
+          "sensor": sensor
+        },
+        "fileInfo": {
+          "checksum": checksum,
+          "extension": extension
+        }
+        }]
+    else:
+        data = [{
+        "rdfType": imagetype,
+        "concern": [
+          {
+            "uri": concerneduri,
+            "typeURI": concernedtype
+          }
+        ],
+        "configuration": {
+          "date": dateforwebservice,
+          "sensor": sensor
+        },
+        "fileInfo": {
+          "checksum": checksum,
+          "extension": extension
+        }
+        }]
+
     json_data = json.dumps(data).encode('utf-8')
 
     response = requests.post(urlimagemetadata, headers=headersimagemetadata, data=json_data)
+    #print(response.text)
     fileuploadurl = json.loads(response.text)['metadata']['datafiles'][0]
     print fileuploadurl, "\n"
   
-      #send file to webservice
+    #send file to webservice
     response = requests.post(fileuploadurl, headers=headersimageupload, data=imagetosend)
-#    print(response.text)
+    #print(response.text)
   
     imagetosend.close()
   
