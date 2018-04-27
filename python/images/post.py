@@ -66,7 +66,7 @@ colsensoruri = 6
 
 reader = csv.reader(csvfile)
 
-#print u"first line =", reader.next(), "\n"
+reader.next()
 
 for line in reader:
     #metadata images
