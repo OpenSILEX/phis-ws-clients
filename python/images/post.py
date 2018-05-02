@@ -21,10 +21,11 @@ host = 'http://localhost:8084/phis2ws/rest/'
 headers = { 'Content-Type': 'application/json',
 'accept' : 'application/json',
 }
+
 data = {
     'grant_type': 'password',
     'username': 'username',
-    'password': 'password',
+    'password': hashlib.md5('password').hexdigest(),
     'client_id': 'string'
 }
 
