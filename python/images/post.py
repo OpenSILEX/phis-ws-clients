@@ -78,10 +78,10 @@ for line in reader:
     position = line[colposition]
     sensor = line[colsensoruri]
     date = line[coldate]
-    datetosend = datetime.strptime(date, "%Y-%m-%d %I:%M:%S")
+    datetosend = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
     tz =  pytz.timezone('Europe/Paris')
     datetosend = datetosend.replace(tzinfo = tz)
-    dateforwebservice = datetosend.strftime("%Y-%m-%d %I:%M:%S%z")
+    dateforwebservice = datetosend.strftime("%Y-%m-%d %H:%M:%S%z")
     
     #file informations (checksum + extension)
     imagetosend = open(imagepath, "r")
