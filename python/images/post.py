@@ -15,6 +15,7 @@ import requests, json, csv, os.path, hashlib, pytz
 from datetime import datetime
 
 host = 'http://localhost:8084/phis2ws/rest/'
+fileName = "POSTImages-template.csv";
 
 ################################################################################
 ## Token generation
@@ -55,7 +56,7 @@ headersimageupload = { 'Content-Type': 'application/octet-stream',
 'Authorization':'Bearer ' + token
 }
 
-csvfile = open("POSTImages-template.csv","rb")
+csvfile = open(fileName,"rb")
 
 colimagepath = 0
 colimagetype = 1
