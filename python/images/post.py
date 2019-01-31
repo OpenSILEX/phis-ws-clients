@@ -15,7 +15,6 @@ import requests, json, csv, os.path, hashlib, pytz
 from datetime import datetime
 
 host = 'http://localhost:8084/phis2ws/rest/'
-fileName = "POSTImages-template.csv";
 
 ################################################################################
 ## Token generation
@@ -56,12 +55,12 @@ headersimageupload = { 'Content-Type': 'application/octet-stream',
 'Authorization':'Bearer ' + token
 }
 
-csvfile = open(fileName,"rb")
+csvfile = open("POSTImages-template.csv","rb")
 
 colimagepath = 0
 colimagetype = 1
-colconcernedItemUri = 2
-colconcernedItemType = 3
+colconcerneduri = 2
+colconcernedtype = 3
 colposition = 4
 coldate = 5
 colsensoruri = 6
@@ -74,8 +73,8 @@ for line in reader:
     #metadata images
     imagepath = line[colimagepath]
     imagetype = line[colimagetype]
-    concernedItemUri = line[colconcernedItemUri]
-    concernedItemType = line[colconcernedItemType]
+    concerneduri = line[colconcerneduri]
+    concernedtype = line[colconcernedtype]
     position = line[colposition]
     sensor = line[colsensoruri]
     date = line[coldate]
@@ -83,20 +82,20 @@ for line in reader:
     tz =  pytz.timezone('Europe/Paris')
     datetosend = datetosend.replace(tzinfo = tz)
     dateforwebservice = datetosend.strftime("%Y-%m-%d %H:%M:%S%z")
-
+    
     #file informations (checksum + extension)
     imagetosend = open(imagepath, "r")
     extension = os.path.splitext(imagepath)[1][1:]
     checksum = hashlib.md5(open(imagepath, "r").read()).hexdigest()
-
+    
     #send image metadata to webservice
     if position != "":
         data = [{
         "rdfType": imagetype,
-        "concernedItems": [
+        "concern": [
           {
-            "uri": concernedItemUri,
-            "typeURI": concernedItemType
+            "uri": concerneduri,
+            "typeURI": concernedtype
           }
         ],
         "configuration": {
@@ -112,10 +111,10 @@ for line in reader:
     else:
         data = [{
         "rdfType": imagetype,
-        "concernedItems": [
+        "concern": [
           {
-            "uri": concernedItemUri,
-            "typeURI": concernedItemType
+            "uri": concerneduri,
+            "typeURI": concernedtype
           }
         ],
         "configuration": {
@@ -127,17 +126,18 @@ for line in reader:
           "extension": extension
         }
         }]
+
     json_data = json.dumps(data).encode('utf-8')
 
     response = requests.post(urlimagemetadata, headers=headersimagemetadata, data=json_data)
     #print(response.text)
     fileuploadurl = json.loads(response.text)['metadata']['datafiles'][0]
     print fileuploadurl, "\n"
-
+  
     #send file to webservice
     response = requests.post(fileuploadurl, headers=headersimageupload, data=imagetosend)
     #print(response.text)
-
+  
     imagetosend.close()
-
-csvfile.close()
+  
+csvfile.close() 
