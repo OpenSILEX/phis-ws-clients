@@ -1,4 +1,5 @@
-
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
 ##**********************************************************************************************
 ##                                       Accessing PHIS WS with a python api
 ##
@@ -6,7 +7,7 @@
 ## Copyright - INRA - 2017
 ## Creation date: December 2017
 ## Contact: morgane.vidal@inra.fr, anne.tireau@inra.fr, pascal.neveu@inra.fr
-## Last modification date:  December, 2017
+## Last modification date:  March, 2019
 ## Subject: Accessing PHIS's webservice with python API and insert images
 ## from a given csv file
 ##**
@@ -25,11 +26,10 @@ headers = { 'Content-Type': 'application/json',
 
 data = {
     'grant_type': 'password',
-    'username': 'username',
-    'password': hashlib.md5('password').hexdigest(),
+    'username': 'admin@opensilex.org',
+    'password': hashlib.md5('admin'.encode('utf-8')).hexdigest(),
     'client_id': 'string'
 }
-
 json_data = json.dumps(data).encode('utf-8')
 
 url = host + 'brapi/v1/token'
@@ -56,7 +56,7 @@ headersimageupload = { 'Content-Type': 'application/octet-stream',
 'Authorization':'Bearer ' + token
 }
 
-csvfile = open(fileName,"rb")
+csvfile = open(fileName,"r", encoding='utf-8')
 
 colimagepath = 0
 colimagetype = 1
@@ -68,7 +68,7 @@ colsensoruri = 6
 
 reader = csv.reader(csvfile)
 
-reader.next()
+next(reader)
 
 for line in reader:
     #metadata images
@@ -85,9 +85,15 @@ for line in reader:
     dateforwebservice = datetosend.strftime("%Y-%m-%d %H:%M:%S%z")
 
     #file informations (checksum + extension)
-    imagetosend = open(imagepath, "r")
+    imagetosend = open(imagepath, "rb")
     extension = os.path.splitext(imagepath)[1][1:]
-    checksum = hashlib.md5(open(imagepath, "r").read()).hexdigest()
+    
+    hasher = hashlib.md5()
+    with open(imagepath, "rb") as afile:
+        buf = afile.read()
+        hasher.update(buf)
+    print(hasher.hexdigest())
+    checksum = hasher.hexdigest()
 
     #send image metadata to webservice
     if position != "":
@@ -130,9 +136,10 @@ for line in reader:
     json_data = json.dumps(data).encode('utf-8')
 
     response = requests.post(urlimagemetadata, headers=headersimagemetadata, data=json_data)
+    
     #print(response.text)
     fileuploadurl = json.loads(response.text)['metadata']['datafiles'][0]
-    print fileuploadurl, "\n"
+    print (fileuploadurl, "\n")
 
     #send file to webservice
     response = requests.post(fileuploadurl, headers=headersimageupload, data=imagetosend)
