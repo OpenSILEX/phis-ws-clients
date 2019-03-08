@@ -18,7 +18,7 @@ from pprint import pprint
 import requests, json, csv, hashlib, pytz
 
 
-host = 'http://138.102.159.37:8080/openSilexTestAPI/rest/'
+host = 'http://localhost:8080/phis2ws/rest/'
 
 ################################################################################
 ## Token generation
