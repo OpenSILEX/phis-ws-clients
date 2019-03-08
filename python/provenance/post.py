@@ -12,13 +12,13 @@
 ##**
 
 # /!\ Script written in python 3 /!\
-from datetime import datetime
+
 from pprint import pprint
 
-import requests, json, csv, hashlib, pytz
+import requests, json, csv, hashlib
 
 
-host = 'http://138.102.159.37:8080/openSilexTestAPI/rest/'
+host = 'http://localhost:8084/phis2ws/rest/'
 
 ################################################################################
 ## Token generation
@@ -56,76 +56,51 @@ headersMetadata = {
     'Authorization':'Bearer ' + token
 }
 
+csvfile = open("POSTProvenance-template.csv","r",encoding='utf-8')
 
-provenances = []
-provenances.append({
-    "label": "provenance-label",
-    "comment":  "provenance-comment",
-    "metadata": {}
-})
-
-json_provenance = json.dumps(provenances)
-
-response = requests.post(serviceUrl, headers=headersMetadata, data=json_provenance)
-
-
-provenanceUri = json.loads(response.text)['metadata']['datafiles'][0]
-
-pprint(provenanceUri)
-  
-
-################################################################################
-## Post data
-
-serviceUrl = host + 'data'
-
-headersMetadata = { 
-    'Content-Type': 'application/json',
-    'accept' : 'application/json',
-    'Authorization':'Bearer ' + token
-}
-
-csvfile = open("POSTData-template.csv","r",encoding='utf-8')
-
-colDate = 0
-colVariable = 1
-colObject = 2
-colValue = 3
+colLabel = 0
+colComment = 1
+colsMetadata = {}
 
 reader = csv.reader(csvfile, delimiter=";")
 
-# skip headers
-next(reader)
+# Get the header
+headers = next(reader)
+numberOfColumns = 0
+for cel in headers:
+    if cel == "label":
+        colLabel = numberOfColumns
+    elif cel == "comment":
+        colComment = numberOfColumns
+    else:
+        colsMetadata[numberOfColumns]=cel
+    
+    numberOfColumns += 1
+
 
 data = []
 for line in reader:
-    dateValue = line[colDate]
-    variableUri = line[colVariable]
-    objectUri = line[colObject]
-    value = line[colValue]
-    
-    dateToSend = datetime.strptime(dateValue, "%Y-%m-%d %H:%M:%S")
-    tz =  pytz.timezone('Europe/Paris')
-    dateToSend = dateToSend.replace(tzinfo = tz)
-    dateForWebservice = dateToSend.strftime("%Y-%m-%dT%H:%M:%S%z")
+    labelValue = line[colLabel]
+    commentValue = line[colComment]
+    metadataValue = {}
+    for col in range(0, numberOfColumns):
+        if col != colLabel and col != colComment and line[col] not in (None, "") :
+            metadataValue[colsMetadata[col]] = line[col]
     
     data.append({
-        "provenanceUri": provenanceUri,
-        "objectUri": objectUri,
-        "variableUri": variableUri,
-        "date": dateForWebservice,
-        "value": value
+        "label": labelValue,
+        "comment": commentValue,
+        "metadata": metadataValue
     })
 
 csvfile.close() 
 
 json_data = json.dumps(data)
 
-print(json_data)
-
 response = requests.post(serviceUrl, headers=headersMetadata, data=json_data)
 
-status = json.loads(response.text)['metadata']['status']
+status = json.loads(response.text)
 
 pprint(status)
   
+
