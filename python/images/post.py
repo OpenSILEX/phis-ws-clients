@@ -13,9 +13,11 @@
 ##**
 
 import requests, json, csv, os.path, hashlib, pytz
+import ntpath
+import mimetypes
 from datetime import datetime
 
-host = 'http://localhost:8084/phis2ws/rest/'
+host = 'http://localhost:8080/phis2ws/rest/'
 fileName = "POSTImages-template.csv";
 
 ################################################################################
@@ -42,16 +44,40 @@ print ("token : " + token + "\n")
 
 
 ################################################################################
-## Post images
+## Post provenance
 
-urlimagemetadata = host + 'images'
+serviceUrl = host + 'provenances'
 
-headersimagemetadata = { 'Content-Type': 'application/json',
-'accept' : 'application/json',
-'Authorization':'Bearer ' + token
+headersMetadata = { 
+    'Content-Type': 'application/json',
+    'accept' : 'application/json',
+    'Authorization':'Bearer ' + token
 }
 
-headersimageupload = { 'Content-Type': 'application/octet-stream',
+
+provenances = []
+provenances.append({
+    "label": "test-provenance",
+    "comment":  "Python script",
+    "metadata": {}
+})
+
+json_provenance = json.dumps(provenances)
+
+response = requests.post(serviceUrl, headers=headersMetadata, data=json_provenance)
+
+
+provenanceUri = json.loads(response.text)['metadata']['datafiles'][0]
+
+print(provenanceUri)
+  
+
+################################################################################
+## Post images
+
+urlfilepost = host + 'data/file'
+
+headersfilepost = {
 'accept' : 'application/json',
 'Authorization':'Bearer ' + token
 }
@@ -82,68 +108,54 @@ for line in reader:
     datetosend = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
     tz =  pytz.timezone('Europe/Paris')
     datetosend = datetosend.replace(tzinfo = tz)
-    dateforwebservice = datetosend.strftime("%Y-%m-%d %H:%M:%S%z")
+    dateforwebservice = datetosend.strftime("%Y-%m-%dT%H:%M:%S%z")
 
+    imagename = ntpath.basename(imagepath)
     #file informations (checksum + extension)
     imagetosend = open(imagepath, "rb")
-    extension = os.path.splitext(imagepath)[1][1:]
-    
-    hasher = hashlib.md5()
-    with open(imagepath, "rb") as afile:
-        buf = afile.read()
-        hasher.update(buf)
-    print(hasher.hexdigest())
-    checksum = hasher.hexdigest()
 
-    #send image metadata to webservice
-    if position != "":
-        data = [{
-        "rdfType": imagetype,
-        "concernedItems": [
-          {
-            "uri": concernedItemUri,
-            "typeURI": concernedItemType
-          }
-        ],
-        "configuration": {
-          "date": dateforwebservice,
-          "position": position,
-          "sensor": sensor
-        },
-        "fileInfo": {
-          "checksum": checksum,
-          "extension": extension
+    filetype = mimetypes.guess_type(imagepath)
+    multipart_form_data = {
+      'description': ('', json.dumps({
+        'rdfType': imagetype,
+        'date': dateforwebservice,
+        'provenanceUri': provenanceUri,
+        'concernedItems': [{
+          'uri': concernedItemUri,
+          'typeURI': concernedItemType
+        }],
+        'metadata': {
+          'sensor': sensor,
+          'position': position
         }
-        }]
-    else:
-        data = [{
-        "rdfType": imagetype,
-        "concernedItems": [
-          {
-            "uri": concernedItemUri,
-            "typeURI": concernedItemType
-          }
-        ],
-        "configuration": {
-          "date": dateforwebservice,
-          "sensor": sensor
-        },
-        "fileInfo": {
-          "checksum": checksum,
-          "extension": extension
-        }
-        }]
-    json_data = json.dumps(data).encode('utf-8')
+      })),
+      'file': (imagename, imagetosend, filetype[0])
+    }
 
-    response = requests.post(urlimagemetadata, headers=headersimagemetadata, data=json_data)
-    
-    #print(response.text)
-    fileuploadurl = json.loads(response.text)['metadata']['datafiles'][0]
-    print (fileuploadurl, "\n")
+    #send file and metadata to webservice
+    req = requests.Request('POST', urlfilepost, headers=headersfilepost, files=multipart_form_data)
+    prepared = req.prepare()
 
-    #send file to webservice
-    response = requests.post(fileuploadurl, headers=headersimageupload, data=imagetosend)
-    #print(response.text)
+    def pretty_print_POST(req):
+      """
+      At this point it is completely built and ready
+      to be fired; it is "prepared".
+
+      However pay attention at the formatting used in 
+      this function because it is programmed to be pretty 
+      printed and may differ from the actual request.
+      """
+      print('{}\n{}\n{}\n\n{}'.format(
+          '-----------START-----------',
+          req.method + ' ' + req.url,
+          '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()),
+          req.body,
+      ))
+
+    #pretty_print_POST(prepared)
+
+    response = requests.Session().send(prepared)
+    print(response.text)
 
     imagetosend.close()
 
